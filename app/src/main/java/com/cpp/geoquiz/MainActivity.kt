@@ -1,6 +1,6 @@
 package com.cpp.geoquiz
 
-import android.content.Intent
+import android.app.Activity
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -10,16 +10,18 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.ViewModelProvider
+
 import androidx.lifecycle.ViewModelProviders
-import java.lang.Math.abs
+import com.cpp.geoquiz.databinding.ActivityMainBinding
+
+
 
 private const val TAG = "MainActivity"
 private const val KEY_INDEX = "index"
 private const val REQUEST_CODE_CHEAT = 0
 
 class MainActivity : AppCompatActivity() {
-
+    private lateinit var binding: ActivityMainBinding
 
     private lateinit var trueButton: Button
     private lateinit var falseButton: Button
@@ -35,16 +37,21 @@ class MainActivity : AppCompatActivity() {
         ViewModelProviders.of(this).get(QuizViewModel::class.java)
     }
 
-   /* private val cheatLauncher = registerForActivityResult(
+    private val cheatLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-// Handle the result
-    }*/
+        if (result.resultCode == Activity.RESULT_OK) {
+            quizViewModel.isCheater =
+                result.data?.getBooleanExtra(EXTRA_ANSWER_SHOWN, false) ?: false
+        }
 
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate(Bundle?) called")
-        setContentView(R.layout.activity_main)
+        //setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         val currentIndex = savedInstanceState?.getInt(KEY_INDEX, 0) ?: 0
         quizViewModel.currentIndex = currentIndex
@@ -53,37 +60,41 @@ class MainActivity : AppCompatActivity() {
         falseButton = findViewById(R.id.false_button)
         nextButton = findViewById(R.id.next_button)
         prevButton = findViewById(R.id.prev_button)
-        //cheatButton = findViewById(R.id.cheat_button)
+        cheatButton = findViewById(R.id.cheat_button)
         questionTextView = findViewById(R.id.question_text_view)
 
-        trueButton.setOnClickListener { view: View ->
+        binding.trueButton.setOnClickListener { view: View ->
             checkAnswer(true)
         }
-        falseButton.setOnClickListener { view: View ->
+        binding.falseButton.setOnClickListener { view: View ->
             checkAnswer(false)
         }
-        nextButton.setOnClickListener {
+        binding.nextButton.setOnClickListener {
             quizViewModel.moveToNext()
             updateQuestion()
         }
-        prevButton.setOnClickListener {
+        binding.prevButton.setOnClickListener {
             //currentIndex = if (currentIndex > 0)  currentIndex - 1 else 0
             updateQuestion()
             //println(currentIndex)
 
         }
 
-/*        cheatButton.setOnClickListener {
+         binding.cheatButton.setOnClickListener {
             // Start CheatActivity
-            val answerIsTrue = quizViewModel.currentQuestionAnswer
-            val intent = CheatActivity.newIntent(this@MainActivity, answerIsTrue)
-            cheatLauncher.launch(intent)
+             val answerIsTrue = quizViewModel.currentQuestionAnswer
+             val intent = CheatActivity.newIntent(this@MainActivity, answerIsTrue)
+             cheatLauncher.launch(intent)
 
-        }*/
+
+
+         }
 
         updateQuestion()
 
     }
+
+
 
 
     override fun onStart() {
@@ -126,15 +137,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateQuestion() {
         val questionTextResId = quizViewModel.currentQuestionText
-        questionTextView.setText(questionTextResId)
+        binding.questionTextView.setText(questionTextResId)
     }
 
     private fun checkAnswer(userAnswer: Boolean) {
         val correctAnswer = quizViewModel.currentQuestionAnswer
-        val messageResId = if (userAnswer == correctAnswer) {
-            R.string.correct_toast;
-        } else {
-            R.string.incorrect_toast
+        val messageResId = when {
+            quizViewModel.isCheater -> R.string.judgment_toast
+            userAnswer == correctAnswer -> R.string.correct_toast
+            else -> R.string.incorrect_toast
         }
         if (userAnswer == correctAnswer){
             correct = correct + 1
